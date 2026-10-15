@@ -1,0 +1,20 @@
+[
+  {
+    "id": "5iq528tpmv9z7pcl",
+    "emoji": "🚀",
+    "name": "Garage",
+    "repo": "",
+    "url": "",
+    "desc": "",
+    "plans": ""
+  },
+  {
+    "id": "koma4zmjmv9z6gw6",
+    "emoji": "🚀",
+    "name": "SimplHub",
+    "repo": "https://github.com/username/simplhub",
+    "url": "https://username.github.io/simplhub/",
+    "desc": "Список всех моих приложений — локальных и серверных. Единая точка входа и планирования.",
+    "plans": "Настроить синхронизацию через GitHub API."
+  }
+]
