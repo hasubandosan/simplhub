@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SimplHub</title>
+<style>
+  :root{
+    --bg:#0e1116; --card:#161b22; --card-hover:#1c232c; --border:#242c37;
+    --text:#e6edf3; --muted:#8b949e;
+    --accent:#4f9cf9; --accent-hover:#6bb0ff;
+    --danger:#f85149; --ok:#3fb950; --warn:#d29922;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:radial-gradient(1200px 600px at 20% -10%, #17202b 0%, var(--bg) 60%);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+  }
+  header{
+    position:sticky;top:0;z-index:10;
+    backdrop-filter:blur(12px);
+    background:rgba(14,17,22,.75);
+    border-bottom:1px solid var(--border);
+    padding:14px 20px;
+  }
+  .bar{max-width:1200px;margin:0 auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .logo{font-size:20px;font-weight:700;letter-spacing:.5px;flex-shrink:0;}
+  .logo span{color:var(--accent);}
+  .search{
+    flex:1;min-width:150px;
+    background:var(--card);border:1px solid var(--border);border-radius:10px;
+    padding:9px 12px;color:var(--text);outline:none;font-size:14px;
+  }
+  .search:focus{border-color:var(--accent);}
+  button{
+    cursor:pointer;font-family:inherit;
+    background:var(--accent);color:#fff;border:none;
+    padding:9px 14px;border-radius:10px;font-size:14px;font-weight:600;
+    transition:.15s;white-space:nowrap;
+  }
+  button:hover{background:var(--accent-hover);}
+  button.ghost{
+    background:transparent;color:var(--text);
+    border:1px solid var(--border);font-weight:500;
+  }
+  button.ghost:hover{background:var(--card-hover);border-color:#333c48;}
+  button:disabled{opacity:.5;cursor:not-allowed;}
+
+  .status{
+    display:inline-flex;align-items:center;gap:7px;
+    font-size:12.5px;color:var(--muted);
+    padding:7px 11px;border-radius:9px;
+    background:var(--card);border:1px solid var(--border);
+    cursor:pointer;transition:.15s;
+    max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .status:hover{border-color:#333c48;color:var(--text);}
+  .status .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+  .status.ok .dot{background:var(--ok);box-shadow:0 0 8px rgba(63,185,80,.6);}
+  .status.err .dot{background:var(--danger);box-shadow:0 0 8px rgba(248,81,73,.6);}
+  .status.load .dot{background:var(--warn);animation:pulse 1s infinite;}
+  @keyframes pulse{50%{opacity:.35;}}
+
+  main{max-width:1200px;margin:0 auto;padding:24px 20px 80px;}
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));}
+
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px;display:flex;flex-direction:column;gap:12px;
+    transition:.18s;position:relative;
+  }
+  .card:hover{background:var(--card-hover);transform:translateY(-2px);border-color:#333c48;}
+  .card-head{display:flex;gap:12px;align-items:flex-start;}
+  .emoji{font-size:32px;line-height:1;flex-shrink:0;}
+  .title{font-size:17px;font-weight:700;line-height:1.3;word-break:break-word;padding-right:60px;}
+  .desc{color:var(--muted);font-size:13.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+  .plans{
+    background:#0e1116;border:1px dashed var(--border);border-radius:10px;
+    padding:10px 12px;font-size:13px;color:#c8d1da;
+    white-space:pre-wrap;word-break:break-word;
+  }
+  .plans b{color:var(--accent);font-weight:600;}
+  .links{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;}
+  .links a{
+    display:inline-flex;align-items:center;gap:6px;
+    text-decoration:none;color:var(--text);
+    background:#0e1116;border:1px solid var(--border);
+    padding:7px 11px;border-radius:9px;font-size:13px;transition:.15s;
+  }
+  .links a:hover{border-color:var(--accent);color:var(--accent);}
+  .actions{
+    position:absolute;top:10px;right:10px;
+    display:flex;gap:4px;opacity:0;transition:.15s;
+  }
+  .card:hover .actions{opacity:1;}
+  .icon-btn{
+    background:#0e1116;border:1px solid var(--border);
+    width:30px;height:30px;border-radius:8px;padding:0;
+    display:grid;place-items:center;font-size:14px;color:var(--muted);
+  }
+  .icon-btn:hover{color:var(--accent);border-color:var(--accent);background:#0e1116;}
+  .icon-btn.del:hover{color:var(--danger);border-color:var(--danger);}
+  .empty{
+    text-align:center;color:var(--muted);
+    padding:80px 20px;border:1px dashed var(--border);border-radius:var(--radius);
+  }
+
+  .overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,.65);
+    backdrop-filter:blur(4px);
+    display:none;align-items:center;justify-content:center;
+    padding:20px;z-index:50;
+  }
+  .overlay.open{display:flex;}
+  .modal{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    width:100%;max-width:560px;max-height:90vh;overflow:auto;padding:22px;
+  }
+  .modal h2{margin:0 0 16px;font-size:19px;}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+  .field label{font-size:12.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+  .field input,.field textarea,.field select{
+    background:#0e1116;border:1px solid var(--border);border-radius:10px;
+    padding:10px 12px;color:var(--text);font-family:inherit;font-size:14px;
+    outline:none;resize:vertical;
+  }
+  .field input:focus,.field textarea:focus{border-color:var(--accent);}
+  .row{display:grid;grid-template-columns:80px 1fr;gap:10px;}
+  .row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px;flex-wrap:wrap;}
+  .modal-actions .left{margin-right:auto;}
+
+  .note{
+    background:#0e1116;border:1px solid var(--border);border-radius:10px;
+    padding:10px 12px;font-size:12.5px;color:var(--muted);line-height:1.55;
+    margin-bottom:16px;
+  }
+  .note a{color:var(--accent);text-decoration:none;}
+  .note a:hover{text-decoration:underline;}
+  .note code{background:#1c232c;padding:1px 5px;border-radius:5px;font-size:12px;color:#e6edf3;}
+  .note.warn{border-color:#4a3a1a;color:#e8d3a0;}
+
+  .footer-note{
+    position:fixed;bottom:0;left:0;right:0;
+    text-align:center;font-size:12px;color:var(--muted);
+    padding:8px;background:rgba(14,17,22,.9);
+    border-top:1px solid var(--border);backdrop-filter:blur(8px);
+  }
+  .footer-note a{color:var(--muted);cursor:pointer;text-decoration:none;}
+  .footer-note a:hover{color:var(--accent);}
+
+  .toast{
+    position:fixed;bottom:60px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:#1c232c;border:1px solid var(--border);
+    padding:10px 16px;border-radius:10px;font-size:13.5px;
+    opacity:0;pointer-events:none;transition:.25s;z-index:100;
+    max-width:90vw;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast.err{border-color:var(--danger);color:#ffb0a9;}
+
+  @media(max-width:600px){
+    .logo{font-size:17px;}
+    button{padding:8px 11px;font-size:13px;}
+    .row-3{grid-template-columns:1fr;}
+    .row-2{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <div class="logo">Simpl<span>Hub</span></div>
+    <input id="search" class="search" type="text" placeholder="Поиск…" />
+    <button id="addBtn">+ Добавить</button>
+    <button class="ghost" id="exportBtn" title="Скачать JSON">⬇</button>
+    <button class="ghost" id="importBtn" title="Загрузить локальный JSON">⬆</button>
+    <input id="importFile" type="file" accept=".json" hidden />
+    <div class="status" id="status" title="Настройки синхронизации">
+      <span class="dot"></span><span id="statusText">Локально</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="grid" class="grid"></div>
+</main>
+
+<div class="footer-note">
+  <span id="footerInfo">Локальный режим · настройте синхронизацию с GitHub</span>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ============ APP MODAL ============ -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">Новое приложение</h2>
+    <form id="form">
+      <div class="row">
+        <div class="field">
+          <label>Эмодзи</label>
+          <input id="f-emoji" type="text" maxlength="4" placeholder="🚀" />
+        </div>
+        <div class="field">
+          <label>Название</label>
+          <input id="f-name" type="text" placeholder="Моё приложение" required />
+        </div>
+      </div>
+      <div class="field">
+        <label>Репозиторий</label>
+        <input id="f-repo" type="url" placeholder="https://github.com/user/repo" />
+      </div>
+      <div class="field">
+        <label>Страница приложения (демо)</label>
+        <input id="f-url" type="url" placeholder="https://user.github.io/repo/" />
+      </div>
+      <div class="field">
+        <label>Описание</label>
+        <textarea id="f-desc" rows="3" placeholder="Что это и зачем…"></textarea>
+      </div>
+      <div class="field">
+        <label>Планы на проект</label>
+        <textarea id="f-plans" rows="3" placeholder="Что хочется сделать дальше…"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="ghost" id="cancelBtn">Отмена</button>
+        <button type="submit" id="saveBtn">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ SETTINGS MODAL ============ -->
+<div class="overlay" id="settingsOverlay">
+  <div class="modal">
+    <h2>Синхронизация с GitHub</h2>
+
+    <div class="note">
+      Список хранится в одном JSON-файле в вашем репозитории. Каждое изменение —
+      отдельный коммит через <a href="https://docs.github.com/rest/repos/contents" target="_blank">GitHub Contents API</a>.
+      Нужен <b>Fine-grained token</b> с правом <code>Contents: Read and write</code> только на этот репозиторий.
+      <br><br>
+      <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">→ Создать токен</a>
+    </div>
+
+    <div class="note warn">
+      ⚠️ Токен сохраняется в <code>localStorage</code> этого браузера. Не открывайте страницу на чужих устройствах
+      и не публикуйте токен. При утечке — сразу отзовите его в настройках GitHub.
+    </div>
+
+    <form id="settingsForm">
+      <div class="row-2">
+        <div class="field">
+          <label>Владелец (owner)</label>
+          <input id="s-owner" type="text" placeholder="username" required />
+        </div>
+        <div class="field">
+          <label>Репозиторий</label>
+          <input id="s-repo" type="text" placeholder="simplhub" required />
+        </div>
+      </div>
+      <div class="row-3">
+        <div class="field">
+          <label>Ветка</label>
+          <input id="s-branch" type="text" placeholder="main" />
+        </div>
+        <div class="field" style="grid-column:span 2">
+          <label>Путь к файлу</label>
+          <input id="s-path" type="text" placeholder="apps.json" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Personal Access Token</label>
+        <input id="s-token" type="password" placeholder="github_pat_…" autocomplete="off" />
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="ghost left" id="disableCloudBtn" style="display:none">Отключить облако</button>
+        <button type="button" class="ghost" id="pullBtn">↻ Загрузить с GitHub</button>
+        <button type="button" class="ghost" id="settingsCancelBtn">Отмена</button>
+        <button type="submit" id="settingsSaveBtn">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   SimplHub — apps.json в GitHub + Contents API
+   ============================================================ */
+
+const CONFIG_KEY = 'simplhub.config.v2';
+const CACHE_KEY  = 'simplhub.apps.v2';
+
+let config = loadConfig();          // { owner, repo, branch, path, token }
+let apps   = loadCache();           // массив приложений
+let fileSha = null;                 // SHA файла в GitHub (для PUT)
+let editingId = null;
+
+/* ---------- storage ---------- */
+function loadConfig(){
+  try{ return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; }
+  catch{ return {}; }
+}
+function saveConfig(){
+  if(isCloudEnabled()) localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  else localStorage.removeItem(CONFIG_KEY);
+}
+function isCloudEnabled(){
+  return !!(config.owner && config.repo && config.token);
+}
+
+function loadCache(){
+  try{
+    const raw = localStorage.getItem(CACHE_KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      if(Array.isArray(d)) return d;
+    }
+  }catch{}
+  return [{
+    id: uid(), emoji:'🚀', name:'SimplHub',
+    repo:'https://github.com/username/simplhub',
+    url:'https://username.github.io/simplhub/',
+    desc:'Список всех моих приложений — локальных и серверных. Единая точка входа и планирования.',
+    plans:'Настроить синхронизацию через GitHub API.'
+  }];
+}
+function saveCache(){
+  try{ localStorage.setItem(CACHE_KEY, JSON.stringify(apps)); }catch{}
+}
+function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+
+/* ---------- base64 <-> utf8 ---------- */
+function toBase64(str){
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  for(let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+function fromBase64(b64){
+  const bin = atob(b64.replace(/\s/g,''));
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+/* ---------- GitHub API ---------- */
+class GitHubError extends Error {
+  constructor(status, body){
+    super(`GitHub ${status}: ${(body||'').slice(0,300)}`);
+    this.status = status;
+  }
+}
+function apiUrl(path){
+  return `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${encodeURIComponent(path)}`;
+}
+function authHeaders(withToken){
+  const h = { 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' };
+  if(withToken && config.token) h['Authorization'] = `Bearer ${config.token}`;
+  return h;
+}
+
+async function pullFromGitHub(){
+  if(!config.owner || !config.repo) throw new Error('Не задан owner/repo');
+  const branch = config.branch || 'main';
+  const url = `${apiUrl(config.path || 'apps.json')}?ref=${encodeURIComponent(branch)}`;
+  const r = await fetch(url, { headers: authHeaders(true) });
+  if(r.status === 404) return { apps: [], sha: null, missing: true };
+  if(!r.ok) throw new GitHubError(r.status, await r.text());
+  const j = await r.json();
+  const json = fromBase64(j.content);
+  let data;
+  try{ data = JSON.parse(json); }
+  catch(e){ throw new Error('Файл не является корректным JSON: ' + e.message); }
+  if(!Array.isArray(data)) throw new Error('Ожидался массив приложений в JSON');
+  return { apps: normalize(data), sha: j.sha, missing: false };
+}
+
+async function pushToGitHub(list, sha){
+  if(!config.token) throw new Error('Нет токена — запись недоступна');
+  const branch = config.branch || 'main';
+  const body = {
+    message: `Update ${config.path || 'apps.json'} via SimplHub`,
+    content: toBase64(JSON.stringify(list, null, 2) + '\n'),
+    branch
+  };
+  if(sha) body.sha = sha;
+  const r = await fetch(apiUrl(config.path || 'apps.json'), {
+    method: 'PUT',
+    headers: { ...authHeaders(true), 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
+  if(!r.ok) throw new GitHubError(r.status, await r.text());
+  const j = await r.json();
+  return j.content.sha;
+}
+
+function normalize(list){
+  return list.map(a => ({
+    id: a.id || uid(),
+    emoji: a.emoji || '📦',
+    name: a.name || '',
+    repo: a.repo || '',
+    url: a.url || '',
+    desc: a.desc || '',
+    plans: a.plans || ''
+  }));
+}
+
+/* ---------- sync engine ---------- */
+let saving = false, pendingSave = false;
+let lastSyncOk = 0;
+
+async function persist(){
+  saveCache();
+  if(!isCloudEnabled()){ setStatus('local'); return; }
+  if(saving){ pendingSave = true; return; }
+  saving = true;
+  setStatus('loading');
+  try{
+    await pushSafely();
+    lastSyncOk = Date.now();
+    setStatus('ok', 'Сохранено ' + timeStr(lastSyncOk));
+  }catch(e){
+    console.error(e);
+    setStatus('error', shortErr(e));
+    toast('Ошибка синхронизации: ' + shortErr(e), true);
+  }finally{
+    saving = false;
+    if(pendingSave){ pendingSave = false; persist(); }
+  }
+}
+
+async function pushSafely(){
+  try{
+    fileSha = await pushToGitHub(apps, fileSha);
+  }catch(e){
+    if(e.status === 409 || e.status === 422){
+      // SHA устарел — обновляем и пробуем ещё раз
+      const fresh = await pullFromGitHub();
+      fileSha = fresh.sha;
+      fileSha = await pushToGitHub(apps, fileSha);
+    } else {
+      throw e;
+    }
+  }
+}
+
+function shortErr(e){
+  if(e.status === 401) return 'неверный токен (401)';
+  if(e.status === 403) return 'нет прав или лимит (403)';
+  if(e.status === 404) return 'репозиторий/путь не найдены (404)';
+  return e.message || String(e);
+}
+
+/* ---------- status UI ---------- */
+const statusEl = document.getElementById('status');
+const statusText = document.getElementById('statusText');
+const footerInfo = document.getElementById('footerInfo');
+
+function setStatus(kind, text){
+  statusEl.classList.remove('ok','err','load');
+  if(kind === 'ok')   { statusEl.classList.add('ok');  statusText.textContent = text || 'Синхронизировано'; }
+  else if(kind === 'error'){ statusEl.classList.add('err'); statusText.textContent = text || 'Ошибка'; }
+  else if(kind === 'loading'){ statusEl.classList.add('load'); statusText.textContent = 'Синхронизация…'; }
+  else { statusText.textContent = 'Локально'; }
+
+  if(isCloudEnabled()){
+    const repo = `${config.owner}/${config.repo}`;
+    footerInfo.innerHTML = `Облако: <b>${escapeHtml(repo)}</b> · <span style="cursor:pointer;text-decoration:underline" id="footerReload">перезагрузить с GitHub</span>`;
+    const fr = document.getElementById('footerReload');
+    if(fr) fr.onclick = manualPull;
+  }else{
+    footerInfo.innerHTML = 'Локальный режим · <span style="cursor:pointer;text-decoration:underline" id="footerCfg">настроить синхронизацию</span>';
+    const fc = document.getElementById('footerCfg');
+    if(fc) fc.onclick = openSettings;
+  }
+}
+
+/* ---------- toast ---------- */
+let toastTimer;
+function toast(msg, isErr){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('err', !!isErr);
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 3200);
+}
+function timeStr(ts){
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
+/* ---------- render ---------- */
+const grid = document.getElementById('grid');
+const searchInput = document.getElementById('search');
+
+function render(){
+  const q = searchInput.value.trim().toLowerCase();
+  const list = apps.filter(a=>{
+    if(!q) return true;
+    return (a.name+' '+a.desc+' '+a.plans+' '+a.repo+' '+a.url).toLowerCase().includes(q);
+  });
+
+  if(list.length === 0){
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">
+      ${apps.length===0 ? 'Пока нет ни одного приложения.<br>Нажмите «+ Добавить».' : 'Ничего не найдено 🔍'}
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(a=>`
+    <div class="card" data-id="${a.id}">
+      <div class="actions">
+        <button class="icon-btn" title="Изменить" onclick="openEdit('${a.id}')">✎</button>
+        <button class="icon-btn del" title="Удалить" onclick="removeApp('${a.id}')">✕</button>
+      </div>
+      <div class="card-head">
+        <div class="emoji">${escapeHtml(a.emoji || '📦')}</div>
+        <div class="title">${escapeHtml(a.name || 'Без названия')}</div>
+      </div>
+      ${a.desc ? `<div class="desc">${escapeHtml(a.desc)}</div>` : ''}
+      ${a.plans ? `<div class="plans"><b>Планы:</b> ${escapeHtml(a.plans)}</div>` : ''}
+      <div class="links">
+        ${a.url ? `<a href="${escapeAttr(a.url)}" target="_blank" rel="noopener">▶ Открыть</a>` : ''}
+        ${a.repo ? `<a href="${escapeAttr(a.repo)}" target="_blank" rel="noopener">⎇ Репозиторий</a>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(s){ return escapeHtml(s); }
+
+/* ---------- app modal ---------- */
+const overlay = document.getElementById('overlay');
+const form = document.getElementById('form');
+const modalTitle = document.getElementById('modalTitle');
+const f = {
+  emoji: document.getElementById('f-emoji'),
+  name:  document.getElementById('f-name'),
+  repo:  document.getElementById('f-repo'),
+  url:   document.getElementById('f-url'),
+  desc:  document.getElementById('f-desc'),
+  plans: document.getElementById('f-plans'),
+};
+
+function openAdd(){
+  editingId = null;
+  modalTitle.textContent = 'Новое приложение';
+  form.reset();
+  f.emoji.value = '🚀';
+  overlay.classList.add('open');
+  setTimeout(()=>f.name.focus(), 50);
+}
+function openEdit(id){
+  const a = apps.find(x=>x.id===id);
+  if(!a) return;
+  editingId = id;
+  modalTitle.textContent = 'Редактировать';
+  f.emoji.value = a.emoji || '';
+  f.name.value  = a.name  || '';
+  f.repo.value  = a.repo  || '';
+  f.url.value   = a.url   || '';
+  f.desc.value  = a.desc  || '';
+  f.plans.value = a.plans || '';
+  overlay.classList.add('open');
+  setTimeout(()=>f.name.focus(), 50);
+}
+function closeModal(){ overlay.classList.remove('open'); editingId = null; }
+
+form.addEventListener('submit', e=>{
+  e.preventDefault();
+  const data = {
+    emoji: f.emoji.value.trim() || '📦',
+    name:  f.name.value.trim(),
+    repo:  f.repo.value.trim(),
+    url:   f.url.value.trim(),
+    desc:  f.desc.value.trim(),
+    plans: f.plans.value.trim(),
+  };
+  if(!data.name) return;
+
+  if(editingId){
+    const i = apps.findIndex(x=>x.id===editingId);
+    apps[i] = { ...apps[i], ...data };
+  }else{
+    apps.unshift({ id: uid(), ...data });
+  }
+  render();
+  closeModal();
+  persist();
+});
+
+document.getElementById('cancelBtn').onclick = closeModal;
+overlay.addEventListener('click', e=>{ if(e.target===overlay) closeModal(); });
+
+window.removeApp = function(id){
+  const a = apps.find(x=>x.id===id);
+  if(!a) return;
+  if(!confirm(`Удалить «${a.name}»?`)) return;
+  apps = apps.filter(x=>x.id!==id);
+  render();
+  persist();
+};
+
+document.getElementById('addBtn').onclick = openAdd;
+searchInput.addEventListener('input', render);
+
+/* ---------- export / import ---------- */
+document.getElementById('exportBtn').onclick = ()=>{
+  const blob = new Blob([JSON.stringify(apps, null, 2)+'\n'], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `simplhub-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+document.getElementById('importBtn').onclick = ()=> document.getElementById('importFile').click();
+document.getElementById('importFile').addEventListener('change', async e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if(!Array.isArray(data)) throw new Error('ожидался массив');
+    const replace = confirm('ОК — заменить текущий список.\nОтмена — добавить элементы в конец.');
+    if(replace) apps = normalize(data);
+    else data.forEach(a=> apps.push(...normalize([a])));
+    render();
+    persist();
+  }catch(err){
+    toast('Не удалось прочитать файл: ' + err.message, true);
+  }
+  e.target.value = '';
+});
+
+/* ---------- settings modal ---------- */
+const settingsOverlay = document.getElementById('settingsOverlay');
+const settingsForm = document.getElementById('settingsForm');
+const s = {
+  owner:  document.getElementById('s-owner'),
+  repo:   document.getElementById('s-repo'),
+  branch: document.getElementById('s-branch'),
+  path:   document.getElementById('s-path'),
+  token:  document.getElementById('s-token'),
+};
+const disableCloudBtn = document.getElementById('disableCloudBtn');
+
+function openSettings(){
+  s.owner.value  = config.owner  || '';
+  s.repo.value   = config.repo   || '';
+  s.branch.value = config.branch || 'main';
+  s.path.value   = config.path   || 'apps.json';
+  s.token.value  = config.token  || '';
+  disableCloudBtn.style.display = isCloudEnabled() ? '' : 'none';
+  settingsOverlay.classList.add('open');
+  setTimeout(()=> (config.owner ? s.repo : s.owner).focus(), 50);
+}
+function closeSettings(){ settingsOverlay.classList.remove('open'); }
+
+document.getElementById('status').onclick = openSettings;
+document.getElementById('settingsCancelBtn').onclick = closeSettings;
+settingsOverlay.addEventListener('click', e=>{ if(e.target===settingsOverlay) closeSettings(); });
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape'){ closeSettings(); closeModal(); }
+});
+
+settingsForm.addEventListener('submit', async e=>{
+  e.preventDefault();
+  const prev = { ...config };
+  config = {
+    owner:  s.owner.value.trim(),
+    repo:   s.repo.value.trim(),
+    branch: s.branch.value.trim() || 'main',
+    path:   s.path.value.trim()   || 'apps.json',
+    token:  s.token.value.trim(),
+  };
+  if(!isCloudEnabled()){
+    toast('Заполните owner, repo и токен', true);
+    config = prev;
+    return;
+  }
+  saveConfig();
+
+  const btn = document.getElementById('settingsSaveBtn');
+  btn.disabled = true; btn.textContent = 'Проверяю…';
+  setStatus('loading');
+  try{
+    const { apps: remote, sha, missing } = await pullFromGitHub();
+    fileSha = sha;
+    if(missing){
+      apps = apps; // оставляем локальный список, он уйдёт первым коммитом
+      toast('Файл не найден — создастся при первом изменении');
+      setStatus('ok', 'Готово, файла ещё нет');
+    }else{
+      apps = remote;
+      lastSyncOk = Date.now();
+      setStatus('ok', 'Загружено ' + timeStr(lastSyncOk));
+      toast('Список загружен из GitHub');
+    }
+    render();
+    closeSettings();
+  }catch(err){
+    setStatus('error', shortErr(err));
+    toast('Не удалось подключиться: ' + shortErr(err), true);
+  }finally{
+    btn.disabled = false; btn.textContent = 'Сохранить';
+  }
+});
+
+document.getElementById('pullBtn').onclick = async ()=>{
+  // применить введённые в форму значения к config, не сохраняя в localStorage? 
+  // Проще: сохраним во временную переменную только для pull.
+  const tmp = { ...config };
+  config = {
+    owner:  s.owner.value.trim(),
+    repo:   s.repo.value.trim(),
+    branch: s.branch.value.trim() || 'main',
+    path:   s.path.value.trim()   || 'apps.json',
+    token:  s.token.value.trim(),
+  };
+  if(!config.owner || !config.repo){ toast('Укажите owner и repo', true); config = tmp; return; }
+  if(!confirm('Перезаписать локальный список данными из GitHub?')){ config = tmp; return; }
+  setStatus('loading');
+  try{
+    const { apps: remote, sha, missing } = await pullFromGitHub();
+    fileSha = sha;
+    apps = missing ? [] : remote;
+    saveCache();
+    render();
+    lastSyncOk = Date.now();
+    setStatus('ok', 'Загружено ' + timeStr(lastSyncOk));
+    toast(missing ? 'Файла нет — список пуст' : 'Загружено из GitHub');
+  }catch(err){
+    setStatus('error', shortErr(err));
+    toast('Ошибка: ' + shortErr(err), true);
+    config = tmp;
+  }
+};
+
+disableCloudBtn.onclick = ()=>{
+  if(!confirm('Отключить синхронизацию? Токен будет удалён из этого браузера.')) return;
+  config = {};
+  fileSha = null;
+  saveConfig();
+  setStatus('local');
+  closeSettings();
+  toast('Синхронизация отключена');
+};
+
+async function manualPull(){
+  if(!isCloudEnabled()) return openSettings();
+  if(!confirm('Загрузить актуальную версию из GitHub? Несохранённые локальные правки будут потеряны.')) return;
+  setStatus('loading');
+  try{
+    const { apps: remote, sha, missing } = await pullFromGitHub();
+    fileSha = sha;
+    apps = missing ? [] : remote;
+    saveCache();
+    render();
+    lastSyncOk = Date.now();
+    setStatus('ok', 'Загружено ' + timeStr(lastSyncOk));
+    toast('Загружено из GitHub');
+  }catch(err){
+    setStatus('error', shortErr(err));
+    toast('Ошибка: ' + shortErr(err), true);
+  }
+}
+
+/* ---------- init ---------- */
+(async function init(){
+  render();
+  if(isCloudEnabled()){
+    setStatus('loading');
+    try{
+      const { apps: remote, sha, missing } = await pullFromGitHub();
+      fileSha = sha;
+      if(!missing && remote.length !== 0 || !missing){
+        apps = remote;
+        saveCache();
+        render();
+      }
+      lastSyncOk = Date.now();
+      setStatus('ok', 'Загружено ' + timeStr(lastSyncOk));
+    }catch(err){
+      console.error(err);
+      setStatus('error', shortErr(err));
+      toast('Не удалось загрузить: ' + shortErr(err), true);
+    }
+  }else{
+    setStatus('local');
+  }
+})();
+</script>
+</body>
+</html>
